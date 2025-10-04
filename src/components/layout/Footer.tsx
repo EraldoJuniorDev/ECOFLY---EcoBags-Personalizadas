@@ -1,11 +1,13 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { MessageCircle, Mail, Instagram } from 'lucide-react'
-import MainLogo from '../../../public/favicon.ico'
-import { WHATSAPP_LINK, INSTAGRAM_LINK, INSTAGRAM_USER }   from "../../constants";
 
 const Footer = () => {
   console.log('Footer component rendered')
+
+  const WHATSAPP_LINK = "https://wa.me/5582982113105"
+  const INSTAGRAM_LINK = "https://instagram.com/__ecofly__"
+  const INSTAGRAM_USER = "__ecofly__"
 
   return (
     <footer className="border-t bg-card">
@@ -14,7 +16,7 @@ const Footer = () => {
           {/* Logo e Descrição */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-                <img src={MainLogo} alt="Logo"  className='w-14'/>
+              <img src="/favicon.ico" alt="Logo" className='w-14'/>
               <span className="text-xl font-bold eco-text-gradient">ECOFLY</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
@@ -30,8 +32,8 @@ const Footer = () => {
               <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Início
               </Link>
-              <Link to="/catalogo" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                Catálogo
+              <Link to="/loja" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                Loja
               </Link>
               <Link to="/feedback" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Feedback
@@ -56,7 +58,7 @@ const Footer = () => {
                 <span>WhatsApp</span>
               </a>
               <a 
-                href="mailto:contato@ecofly.com.br"
+                href="mailto:ecoflybags@gmail.com"
                 className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail className="h-4 w-4" />
