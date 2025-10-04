@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Label } from '../components/ui/label'
-import { Star, Send, User, MessageSquare, Clock, Award } from 'lucide-react'
+import { Star, Send, User, MessageSquare, Clock, Award, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFeedback } from '../hooks/useFeedback'
 
 const Feedback = () => {
-  console.log('Feedback page rendered')
+  console.log('Feedback page rendered with Supabase integration')
 
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
@@ -20,10 +20,18 @@ const Feedback = () => {
     message: ''
   })
 
-  const { addFeedback, getRecentFeedbacks, feedbacksCount } = useFeedback()
+  const { 
+    addFeedback, 
+    getRecentFeedbacks, 
+    refreshFeedbacks, 
+    feedbacksCount, 
+    isLoading, 
+    isSubmitting 
+  } = useFeedback()
+  
   const recentFeedbacks = getRecentFeedbacks(5)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Feedback submitted:', { ...formData, rating })
     
@@ -37,21 +45,25 @@ const Feedback = () => {
       return
     }
 
-    // Adicionar feedback usando o hook
-    const feedbackId = addFeedback({
-      name: formData.name,
-      email: formData.email,
-      product: formData.product,
-      message: formData.message,
-      rating: rating
-    })
+    try {
+      // Adicionar feedback ao Supabase
+      await addFeedback({
+        name: formData.name,
+        email: formData.email,
+        product: formData.product,
+        message: formData.message,
+        rating: rating
+      })
 
-    console.log('Feedback adicionado com ID:', feedbackId)
-    toast.success('Obrigado pelo seu feedback! Sua opinião é muito importante para nós.')
-    
-    // Reset form
-    setFormData({ name: '', email: '', product: '', message: '' })
-    setRating(0)
+      console.log('Feedback enviado com sucesso!')
+      
+      // Reset form
+      setFormData({ name: '', email: '', product: '', message: '' })
+      setRating(0)
+    } catch (error) {
+      console.error('Erro ao enviar feedback:', error)
+      // O toast de erro já é mostrado no hook
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -140,6 +152,7 @@ const Feedback = () => {
                   onChange={handleInputChange}
                   placeholder="Seu nome"
                   required
+                  disabled={isSubmitting}
                   className="transition-all duration-200 focus:scale-[1.02]"
                 />
               </div>
@@ -154,6 +167,7 @@ const Feedback = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="seu@email.com"
+                  disabled={isSubmitting}
                   className="transition-all duration-200 focus:scale-[1.02]"
                 />
               </div>
@@ -167,6 +181,7 @@ const Feedback = () => {
                   value={formData.product}
                   onChange={handleInputChange}
                   placeholder="Qual produto você adquiriu?"
+                  disabled={isSubmitting}
                   className="transition-all duration-200 focus:scale-[1.02]"
                 />
               </div>
@@ -182,13 +197,27 @@ const Feedback = () => {
                   placeholder="Conte-nos sobre sua experiência com nossos produtos..."
                   rows={4}
                   required
+                  disabled={isSubmitting}
                   className="transition-all duration-200 focus:scale-[1.02] resize-none"
                 />
               </div>
 
-              <Button type="submit" className="w-full eco-gradient text-white hover-scale">
-                <Send className="w-4 h-4 mr-2" />
-                Enviar Feedback
+              <Button 
+                type="submit" 
+                className="w-full eco-gradient text-white hover-scale"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Enviar Feedback
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>
@@ -198,14 +227,38 @@ const Feedback = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Feedbacks Recentes</h2>
-            {feedbacksCount > 0 && (
-              <div className="text-sm text-muted-foreground">
-                {feedbacksCount} total
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {feedbacksCount > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {feedbacksCount} total
+                </div>
+              )}
+              <Button
+                onClick={refreshFeedbacks}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
           
-          {recentFeedbacks.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="shadow-md">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
+                      <div className="h-16 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : recentFeedbacks.length === 0 ? (
             <Card className="shadow-md">
               <CardContent className="p-8 text-center">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

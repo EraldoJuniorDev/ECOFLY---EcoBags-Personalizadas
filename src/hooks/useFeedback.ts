@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { supabase, type FeedbackRow, type FeedbackInsert } from '../lib/supabase'
+import { toast } from 'sonner'
 
 export interface FeedbackMessage {
   id: string
@@ -12,78 +14,110 @@ export interface FeedbackMessage {
 
 export const useFeedback = () => {
   const [feedbacks, setFeedbacks] = useState<FeedbackMessage[]>([])
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  console.log('useFeedback hook initialized')
+  console.log('useFeedback hook initialized with Supabase integration')
 
-  // Carregar feedbacks do localStorage
-  useEffect(() => {
-    const loadFeedbacks = () => {
-      try {
-        const savedFeedbacks = localStorage.getItem('ecofly-feedbacks')
-        if (savedFeedbacks) {
-          const parsedFeedbacks = JSON.parse(savedFeedbacks)
-          console.log('Feedbacks carregados do localStorage:', parsedFeedbacks)
-          setFeedbacks(parsedFeedbacks)
-        } else {
-          console.log('Nenhum feedback encontrado no localStorage')
-          setFeedbacks([])
-        }
-      } catch (error) {
-        console.error('Erro ao carregar feedbacks do localStorage:', error)
-        localStorage.removeItem('ecofly-feedbacks')
-        setFeedbacks([])
-      } finally {
-        setIsLoaded(true)
+  // Carregar feedbacks do Supabase
+  const loadFeedbacks = async () => {
+    try {
+      setIsLoading(true)
+      console.log('Carregando feedbacks do Supabase...')
+      
+      const { data, error } = await supabase
+        .from('feedbacks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.error('Erro ao carregar feedbacks:', error)
+        toast.error('Erro ao carregar feedbacks')
+        return
       }
-    }
 
-    if (!isLoaded) {
-      loadFeedbacks()
-    }
-  }, [isLoaded])
+      const formattedFeedbacks: FeedbackMessage[] = data.map((feedback: FeedbackRow) => ({
+        id: feedback.id,
+        name: feedback.name,
+        email: feedback.email,
+        product: feedback.product,
+        message: feedback.message,
+        rating: feedback.rating,
+        date: new Date(feedback.created_at).toLocaleString('pt-BR')
+      }))
 
-  // Salvar no localStorage sempre que feedbacks mudar
+      console.log('Feedbacks carregados do Supabase:', formattedFeedbacks.length)
+      setFeedbacks(formattedFeedbacks)
+    } catch (error) {
+      console.error('Erro inesperado ao carregar feedbacks:', error)
+      toast.error('Erro inesperado ao carregar feedbacks')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Carregar feedbacks na inicialização
   useEffect(() => {
-    if (isLoaded) {
-      console.log('Salvando feedbacks no localStorage:', feedbacks)
-      localStorage.setItem('ecofly-feedbacks', JSON.stringify(feedbacks))
-    }
-  }, [feedbacks, isLoaded])
+    loadFeedbacks()
+  }, [])
 
-  const addFeedback = (feedback: Omit<FeedbackMessage, 'id' | 'date'>) => {
-    console.log('=== ADICIONANDO FEEDBACK ===')
-    console.log('Feedback a ser adicionado:', feedback)
-    
-    const newFeedback: FeedbackMessage = {
-      ...feedback,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      date: new Date().toLocaleString('pt-BR')
+  // Adicionar novo feedback
+  const addFeedback = async (feedback: Omit<FeedbackMessage, 'id' | 'date'>) => {
+    try {
+      setIsSubmitting(true)
+      console.log('=== ADICIONANDO FEEDBACK AO SUPABASE ===')
+      console.log('Feedback a ser adicionado:', feedback)
+      
+      const feedbackData: FeedbackInsert = {
+        name: feedback.name,
+        email: feedback.email,
+        product: feedback.product,
+        message: feedback.message,
+        rating: feedback.rating
+      }
+
+      const { data, error } = await supabase
+        .from('feedbacks')
+        .insert([feedbackData])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Erro ao salvar feedback no Supabase:', error)
+        toast.error('Erro ao enviar feedback. Tente novamente.')
+        throw error
+      }
+
+      console.log('Feedback salvo no Supabase:', data)
+      
+      // Recarregar a lista de feedbacks
+      await loadFeedbacks()
+      
+      toast.success('Feedback enviado com sucesso!')
+      return data.id
+    } catch (error) {
+      console.error('Erro ao adicionar feedback:', error)
+      throw error
+    } finally {
+      setIsSubmitting(false)
     }
-    
-    setFeedbacks(prevFeedbacks => {
-      const newFeedbacks = [newFeedback, ...prevFeedbacks] // Adiciona no início para mostrar os mais recentes primeiro
-      console.log('Novos feedbacks após adição:', newFeedbacks)
-      return newFeedbacks
-    })
-    
-    return newFeedback.id
   }
 
   const getRecentFeedbacks = (limit: number = 5) => {
     return feedbacks.slice(0, limit)
   }
 
-  const clearAllFeedbacks = () => {
-    console.log('=== LIMPANDO TODOS OS FEEDBACKS ===')
-    setFeedbacks([])
-    localStorage.removeItem('ecofly-feedbacks')
+  // Recarregar feedbacks manualmente
+  const refreshFeedbacks = () => {
+    return loadFeedbacks()
   }
 
   // Debug logs
   console.log('Hook estado atual:', { 
     feedbacksCount: feedbacks.length,
-    isLoaded,
+    isLoading,
+    isSubmitting,
     recentFeedbacks: feedbacks.slice(0, 3).map(f => ({ id: f.id, name: f.name, rating: f.rating }))
   })
 
@@ -91,8 +125,9 @@ export const useFeedback = () => {
     feedbacks,
     addFeedback,
     getRecentFeedbacks,
-    clearAllFeedbacks,
+    refreshFeedbacks,
     feedbacksCount: feedbacks.length,
-    isLoaded
+    isLoading,
+    isSubmitting
   }
 }
