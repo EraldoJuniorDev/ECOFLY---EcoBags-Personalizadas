@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Label } from '../components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Star, Send, User, MessageSquare, Clock, Award, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFeedback } from '../hooks/useFeedback'
@@ -73,6 +74,13 @@ const Feedback = () => {
     }))
   }
 
+  const handleProductChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      product: value
+    }))
+  }
+
   const getRatingText = (stars: number) => {
     switch (stars) {
       case 1: return 'Muito Ruim'
@@ -83,6 +91,12 @@ const Feedback = () => {
       default: return ''
     }
   }
+
+  const productOptions = [
+    { value: 'cinzeiro', label: 'Cinzeiro' },
+    { value: 'ecobag', label: 'EcoBag' },
+    { value: 'mini-tela', label: 'Mini Tela' }
+  ]
 
   return (
     <div className="container px-4 py-8">
@@ -172,18 +186,21 @@ const Feedback = () => {
                 />
               </div>
 
-              {/* Product */}
+              {/* Product Select */}
               <div className="space-y-2">
-                <Label htmlFor="product">Produto (opcional)</Label>
-                <Input
-                  id="product"
-                  name="product"
-                  value={formData.product}
-                  onChange={handleInputChange}
-                  placeholder="Qual produto você adquiriu?"
-                  disabled={isSubmitting}
-                  className="transition-all duration-200 focus:scale-[1.02]"
-                />
+                <Label htmlFor="product">Tipo de Produto (opcional)</Label>
+                <Select value={formData.product} onValueChange={handleProductChange} disabled={isSubmitting}>
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                    <SelectValue placeholder="Selecione o tipo de produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Message */}
